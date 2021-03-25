@@ -1,3 +1,4 @@
+import 'package:be_project/screens/home_screen.dart';
 import 'package:be_project/screens/login_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -14,7 +15,7 @@ class SignupScreen extends StatelessWidget {
                 Container(
                   alignment: Alignment.center,
                   height: 200,
-                  child: Text('LOGO'),
+                  child: Text('MEDICAL IMAGE CAPTIONING'),
                 ),
                 Container(
                   decoration: BoxDecoration(
@@ -127,7 +128,14 @@ class SignupScreen extends StatelessWidget {
                         color: Colors.white,
                       ),
                     ),
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => HomeScreen(),
+                        ),
+                      );
+                    },
                   ),
                 ),
                 SizedBox(height: 30),
@@ -150,7 +158,14 @@ class SignupScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(5),
                         ),
                         height: 30,
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => HomeScreen(),
+                            ),
+                          );
+                        },
                         child: Image.asset(
                           'assets/icons/facebook.png',
                           height: 15,
