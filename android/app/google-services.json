@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "395007887055",
+    "project_id": "medical-image-captioning-fdff2",
+    "storage_bucket": "medical-image-captioning-fdff2.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:395007887055:android:b056cd61100e4b19b319ba",
+        "android_client_info": {
+          "package_name": "com.example.be_project"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "395007887055-nht2mcq905668k7n2lie34o37ogbeqcq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.be_project",
+            "certificate_hash": "3d171852c1e1f7a29722b7a1adc845a6a7cbac20"
+          }
+        },
+        {
+          "client_id": "395007887055-5mdor91h2r7k1mepknuv7kk51phtfqvt.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCiRigAH4B4aw6uYm6VOQSWwzK43a_9xmU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "395007887055-5mdor91h2r7k1mepknuv7kk51phtfqvt.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
