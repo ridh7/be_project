@@ -49,7 +49,6 @@ class _MyAppState extends State<MyApp> {
 class AuthenticationWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    print('hi');
     final firebaseUser = context.watch<User>();
     if (firebaseUser != null) return HomeScreen();
     return LoginScreen();

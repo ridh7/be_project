@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:be_project/authentication_service.dart';
+import 'package:be_project/screens/previous_scans_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
@@ -7,6 +8,33 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:math';
+
+import 'dart:convert';
+
+Caption captionFromJson(String str) => Caption.fromJson(json.decode(str));
+
+String captionToJson(Caption data) => json.encode(data.toJson());
+
+class Caption {
+  Caption({
+    this.caption,
+    this.error,
+  });
+
+  List<String> caption;
+  int error;
+
+  factory Caption.fromJson(Map<String, dynamic> json) => Caption(
+        caption: List<String>.from(json["caption"].map((x) => x)),
+        error: json["error"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "caption": List<dynamic>.from(caption.map((x) => x)),
+        "error": error,
+      };
+}
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -16,32 +44,40 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
+  String url;
+
+  bool loading = false, isFeedbackGiven = false;
+
   final firestoreInstance = FirebaseFirestore.instance;
+
+  Caption output;
+
+  TextEditingController _feedbackController = TextEditingController();
 
   Future uploadImageToFirebase() async {
     FirebaseStorage storage = FirebaseStorage.instance;
-    Reference ref = storage.ref().child("xray" +
+    Reference ref = storage.ref().child("xray_" +
         FirebaseAuth.instance.currentUser.uid +
+        "_" +
         DateTime.now().toString());
     UploadTask uploadTask = ref.putFile(_image);
-    uploadTask.then((res) async {
-      String url = await res.ref.getDownloadURL();
-      print(url);
-    });
-  }
 
-  void _onPressed() {
-    firestoreInstance.collection("users").add({
-      "name": "johnny",
-      "age": 50,
-      "email": "example@example.com",
-      "address": {"street": "street 24", "city": "new york"}
-    }).then((value) {
-      print(value.id);
+    uploadTask.then((res) async {
+      url = await res.ref.getDownloadURL();
+      firestoreInstance.collection(FirebaseAuth.instance.currentUser.uid).add({
+        "imageUrl": url,
+        "timestamp": DateTime.now().toString(),
+        "caption": output.caption.join(' '),
+        "id": Random().nextInt(1000).toString(),
+      });
     });
   }
 
   void _onItemTapped(int index) {
+    if (index == 2) {
+      context.read<AuthenticationService>().signOut();
+      return;
+    }
     setState(() {
       _selectedIndex = index;
     });
@@ -50,15 +86,31 @@ class _HomeScreenState extends State<HomeScreen> {
   File _image;
   final picker = ImagePicker();
 
-  File file;
-  var serverReceiverPath = " https://mic-be-2020.osc-fr1.scalingo.io/";
+  var serverReceiverPath = "https://mic-be-2020.osc-fr1.scalingo.io/";
 
-  Future<String> uploadImage(String filename) async {
+  Future<void> uploadImage(String filename) async {
+    setState(() {
+      loading = true;
+    });
     var request = http.MultipartRequest('POST', Uri.parse(serverReceiverPath));
-    request.files.add(await http.MultipartFile.fromPath('picture', filename));
-    var res = await request.send();
-    print(res.statusCode);
-    return res.reasonPhrase;
+    request.files.add(await http.MultipartFile.fromPath('file', filename));
+    http.Response response =
+        await http.Response.fromStream(await request.send());
+    output = captionFromJson(response.body);
+    uploadImageToFirebase();
+    setState(() {
+      loading = false;
+    });
+    if (output.error == 0) {
+      setState(() {
+        output = captionFromJson(response.body);
+      });
+    } else {
+      setState(() {
+        output.caption = ['error'];
+      });
+    }
+    print(output.caption);
   }
 
   Future getImage(ImageSource source) async {
@@ -87,8 +139,8 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Previous Scans',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
+            icon: Icon(Icons.logout),
+            label: 'Log Out',
           ),
         ],
         currentIndex: _selectedIndex,
@@ -169,186 +221,140 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       if (_image != null) SizedBox(height: 15),
                       if (_image != null)
-                        FlatButton(
-                          onPressed: () {
-                            setState(() {
-                              _image = null;
-                            });
-                          },
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(50),
-                          ),
-                          color: Colors.red,
-                          child: Text(
-                            'Remove Image',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.white,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            FlatButton(
+                              onPressed: () {
+                                setState(() {
+                                  _image = null;
+                                  output = null;
+                                  isFeedbackGiven = false;
+                                });
+                              },
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(50),
+                              ),
+                              color: Colors.red,
+                              child: Text(
+                                'Remove Image',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white,
+                                ),
+                              ),
                             ),
-                          ),
+                            if (output != null && !isFeedbackGiven)
+                              FlatButton(
+                                onPressed: () {
+                                  _feedbackController.text = "";
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      contentPadding: EdgeInsets.all(20),
+                                      content: TextFormField(
+                                        keyboardType: TextInputType.multiline,
+                                        maxLines: 3,
+                                        autovalidateMode:
+                                            AutovalidateMode.onUserInteraction,
+                                        validator: (value) {
+                                          return value.length > 0
+                                              ? null
+                                              : 'This field cannot be empty';
+                                        },
+                                        controller: _feedbackController,
+                                        decoration: InputDecoration(
+                                          isDense: true,
+                                          labelText: 'Correct Caption',
+                                          border: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(10.0),
+                                          ),
+                                        ),
+                                      ),
+                                      actions: [
+                                        ElevatedButton(
+                                          onPressed: () {
+                                            print(url);
+                                            FirebaseFirestore.instance
+                                                .collection('feedback')
+                                                .add(
+                                              {
+                                                'imageUrl': url,
+                                                'userGeneratedCaption':
+                                                    _feedbackController.text
+                                              },
+                                            );
+                                            setState(() {
+                                              isFeedbackGiven = true;
+                                            });
+                                            Navigator.pop(context);
+                                          },
+                                          child: Text('Confirm'),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed: () {
+                                            Navigator.pop(context);
+                                          },
+                                          child: Text('Cancel'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(50),
+                                ),
+                                color: Colors.green,
+                                child: Text(
+                                  'Give Feedback',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       if (_image != null) SizedBox(height: 15),
                       if (_image == null) SizedBox(height: 30),
                       FlatButton(
                         onPressed: () {
                           // uploadImageToFirebase();
-                          _onPressed();
+                          // _onPressed();
+                          uploadImage(_image.path);
                         },
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(50),
                         ),
                         color: Colors.blueGrey,
-                        child: Text(
-                          'Generate Caption',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.white,
-                          ),
-                        ),
+                        child: loading
+                            ? SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Text(
+                                'Generate Caption',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white,
+                                ),
+                              ),
                       ),
                       SizedBox(height: 30),
                       Text(
-                        'Stable tortuosity of the thoracic aorta. The presence of an underlying aneurysm cannot be excluded. Clear lungs.',
+                        output != null ? output.caption.join(' ') : '',
                         style: TextStyle(fontFamily: 'Raleway-Medium'),
                         textAlign: TextAlign.center,
-                      )
+                      ),
                     ],
                   ),
                 )
               : _selectedIndex == 1
-                  ? Padding(
-                      padding: const EdgeInsets.all(10),
-                      child: Column(
-                        children: [
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 5),
-                            height: 30,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(100),
-                              border: Border.all(
-                                color: Colors.black.withOpacity(.5),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.search),
-                                Text('Search'),
-                              ],
-                            ),
-                          ),
-                          SizedBox(height: 10),
-                          Expanded(
-                            child: ListView.builder(
-                              itemCount: 10,
-                              itemBuilder: (context, index) => Card(
-                                color: Colors.blueGrey,
-                                elevation: 3,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Padding(
-                                  padding: EdgeInsets.all(10),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        height: 100,
-                                        width: 100,
-                                        decoration: BoxDecoration(
-                                          border:
-                                              Border.all(color: Colors.white),
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                          image: DecorationImage(
-                                            image: AssetImage(
-                                                'assets/images/chest-scan.jpeg'),
-                                            fit: BoxFit.cover,
-                                          ),
-                                        ),
-                                      ),
-                                      SizedBox(width: 20),
-                                      Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          RichText(
-                                            text: TextSpan(
-                                              style: TextStyle(
-                                                  fontFamily: 'Raleway'),
-                                              children: [
-                                                TextSpan(
-                                                  text: 'ID: ',
-                                                  style: TextStyle(
-                                                    fontFamily: 'Raleway-Bold',
-                                                  ),
-                                                ),
-                                                TextSpan(text: '1234'),
-                                              ],
-                                            ),
-                                          ),
-                                          RichText(
-                                            text: TextSpan(
-                                              style: TextStyle(
-                                                  fontFamily: 'Raleway'),
-                                              children: [
-                                                TextSpan(
-                                                  text: 'Date: ',
-                                                  style: TextStyle(
-                                                    fontFamily: 'Raleway-Bold',
-                                                  ),
-                                                ),
-                                                TextSpan(
-                                                    text: 'January 22, 2021'),
-                                              ],
-                                            ),
-                                          ),
-                                          RichText(
-                                            text: TextSpan(
-                                              style: TextStyle(
-                                                  fontFamily: 'Raleway'),
-                                              children: [
-                                                TextSpan(
-                                                  text: 'Time: ',
-                                                  style: TextStyle(
-                                                    fontFamily: 'Raleway-Bold',
-                                                  ),
-                                                ),
-                                                TextSpan(text: '8:55 am'),
-                                              ],
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            width: 240,
-                                            child: RichText(
-                                              text: TextSpan(
-                                                style: TextStyle(
-                                                    fontFamily: 'Raleway'),
-                                                children: [
-                                                  TextSpan(
-                                                    text: 'Caption: ',
-                                                    style: TextStyle(
-                                                      fontFamily:
-                                                          'Raleway-Bold',
-                                                    ),
-                                                  ),
-                                                  TextSpan(
-                                                      text:
-                                                          'Stable tortuosity of the thoracic aorta. The presence of an underlying aneurysm cannot be excluded. Clear lungs.'),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
+                  ? PreviousScans()
                   : Padding(
                       padding: EdgeInsets.all(10),
                       child: Column(
@@ -392,7 +398,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                   ),
                                   Text(
-                                    'Ridhwik Kalgaonkar',
+                                    FirebaseAuth
+                                            .instance.currentUser.displayName ??
+                                        'null',
                                     style: TextStyle(
                                       fontFamily: 'Raleway-Medium',
                                       color: Colors.blueGrey,

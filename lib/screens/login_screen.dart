@@ -10,7 +10,9 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   TextEditingController _emailController, _passwordController;
-  bool _passwordHidden = true;
+  bool _passwordHidden = true, _loading = false;
+
+  String errorMessage;
 
   final _key = GlobalKey<FormState>();
 
@@ -95,79 +97,103 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       color: Colors.blueGrey,
-                      child: Text(
-                        'Sign In',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.white,
-                        ),
-                      ),
+                      child: _loading
+                          ? CircularProgressIndicator(
+                              color: Colors.white,
+                            )
+                          : Text(
+                              'Sign In',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.white,
+                              ),
+                            ),
                       onPressed: () {
                         if (_key.currentState.validate()) {
-                          context.read<AuthenticationService>().signIn(
+                          setState(() {
+                            _loading = true;
+                          });
+                          context
+                              .read<AuthenticationService>()
+                              .signIn(
                                 email: _emailController.text,
                                 password: _passwordController.text,
-                              );
+                              )
+                              .then((value) {
+                            if (value != 'Signed In')
+                              setState(() {
+                                errorMessage = value;
+                                _loading = false;
+                              });
+                          });
                         }
                       },
                     ),
                   ),
                   SizedBox(height: 10),
-                  Text('Forgot Password?'),
-                  SizedBox(height: 30),
                   Text(
-                    'OR',
+                    errorMessage ?? '',
                     style: TextStyle(
-                      fontSize: 20,
+                      color: Colors.red,
                     ),
+                    textAlign: TextAlign.center,
                   ),
-                  SizedBox(height: 30),
-                  Text('Sign In With'),
-                  SizedBox(
-                    width: 300,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        FlatButton(
-                          color: Colors.blueGrey.withOpacity(.1),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                          height: 30,
-                          onPressed: () {},
-                          child: Image.asset(
-                            'assets/icons/facebook.png',
-                            height: 15,
-                          ),
-                        ),
-                        FlatButton(
-                          color: Colors.blueGrey.withOpacity(.1),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                          height: 30,
-                          onPressed: () {},
-                          child: Image.asset(
-                            'assets/icons/google.png',
-                            height: 15,
-                          ),
-                        ),
-                        FlatButton(
-                          color: Colors.blueGrey.withOpacity(.1),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                          height: 30,
-                          onPressed: () {},
-                          child: Image.asset(
-                            'assets/icons/twitter.png',
-                            height: 15,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: 50),
+                  // SizedBox(height: 10),
+                  // Text('Forgot Password?'),
+                  // SizedBox(height: 30),
+                  // Text(
+                  //   'OR',
+                  //   style: TextStyle(
+                  //     fontSize: 20,
+                  //   ),
+                  // ),
+                  // SizedBox(height: 30),
+                  // Text('Sign In With'),
+                  // SizedBox(
+                  //   width: 300,
+                  //   child: Row(
+                  //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  //     children: [
+                  //       FlatButton(
+                  //         color: Colors.blueGrey.withOpacity(.1),
+                  //         shape: RoundedRectangleBorder(
+                  //           borderRadius: BorderRadius.circular(5),
+                  //         ),
+                  //         height: 30,
+                  //         onPressed: () {},
+                  //         child: Image.asset(
+                  //           'assets/icons/facebook.png',
+                  //           height: 15,
+                  //         ),
+                  //       ),
+                  //       FlatButton(
+                  //         color: Colors.blueGrey.withOpacity(.1),
+                  //         shape: RoundedRectangleBorder(
+                  //           borderRadius: BorderRadius.circular(5),
+                  //         ),
+                  //         height: 30,
+                  //         onPressed: () {},
+                  //         child: Image.asset(
+                  //           'assets/icons/google.png',
+                  //           height: 15,
+                  //         ),
+                  //       ),
+                  //       FlatButton(
+                  //         color: Colors.blueGrey.withOpacity(.1),
+                  //         shape: RoundedRectangleBorder(
+                  //           borderRadius: BorderRadius.circular(5),
+                  //         ),
+                  //         height: 30,
+                  //         onPressed: () {},
+                  //         child: Image.asset(
+                  //           'assets/icons/twitter.png',
+                  //           height: 15,
+                  //         ),
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ),
+                  SizedBox(height: 40),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
