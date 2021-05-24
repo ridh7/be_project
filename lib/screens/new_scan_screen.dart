@@ -204,9 +204,7 @@ class _NewScanScreenState extends State<NewScanScreen> {
                     ),
                   ),
                 ),
-                if (output != null &&
-                    !isFeedbackGiven &&
-                    output.caption != ['error'])
+                if (output != null && !isFeedbackGiven && output.error != 1)
                   FlatButton(
                     onPressed: () {
                       _feedbackController.text = "";
