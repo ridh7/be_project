@@ -74,6 +74,8 @@ class _PreviousScansState extends State<PreviousScans> {
           ));
         },
       );
+      scans.sort((a, b) =>
+          DateTime.parse(a.timestamp).compareTo(DateTime.parse(b.timestamp)));
     }).then((value) {
       setState(() {
         _loading = false;

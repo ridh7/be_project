@@ -21,7 +21,6 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
-    print('hiiii');
     return MultiProvider(
       providers: [
         Provider<AuthenticationService>(

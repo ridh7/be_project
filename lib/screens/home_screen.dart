@@ -97,17 +97,16 @@ class _HomeScreenState extends State<HomeScreen> {
     http.Response response =
         await http.Response.fromStream(await request.send());
     output = captionFromJson(response.body);
-    uploadImageToFirebase();
-    setState(() {
-      loading = false;
-    });
     if (output.error == 0) {
       setState(() {
         output = captionFromJson(response.body);
+        uploadImageToFirebase();
+        loading = false;
       });
     } else {
       setState(() {
         output.caption = ['error'];
+        loading = false;
       });
     }
     print(output.caption);
@@ -244,7 +243,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
                             ),
-                            if (output != null && !isFeedbackGiven)
+                            if (output != null &&
+                                !isFeedbackGiven &&
+                                output.caption != ['error'])
                               FlatButton(
                                 onPressed: () {
                                   _feedbackController.text = "";
